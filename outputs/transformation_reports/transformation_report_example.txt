@@ -1,0 +1,47 @@
+============================================================
+  AI-Assisted Data Wrangler & Visualizer
+  Transformation Report
+============================================================
+
+Generated : 2026-03-27 04:21:02
+File Name : test.csv
+Shape     : 89 rows x 16 columns
+Total Transformations: 5
+
+------------------------------------------------------------
+TRANSFORMATION LOG
+------------------------------------------------------------
+
+Step 1: fill_missing_with_constant
+  Timestamp  : 2026-03-27 04:19:26
+  Columns    : city
+  fill_value: unknown
+
+Step 2: drop_rows_with_missing
+  Timestamp  : 2026-03-27 04:19:35
+  Columns    : email, join_date
+  rows_removed: 28
+
+Step 3: remove_full_row_duplicates
+  Timestamp  : 2026-03-27 04:19:39
+  Columns    : all columns
+  keep: first
+  rows_removed: 3
+
+Step 4: remove_outliers_iqr
+  Timestamp  : 2026-03-27 04:20:12
+  Columns    : score
+  lower_bound: 20.25
+  upper_bound: 126.25
+  removed_count: 3
+
+Step 5: z_score_scale_columns
+  Timestamp  : 2026-03-27 04:20:21
+  Columns    : score
+  method: z-score
+  mean: 0
+  std: 1
+
+============================================================
+End of Report
+============================================================

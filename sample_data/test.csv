@@ -1,0 +1,124 @@
+record_id,first_name,last_name,city,department,status,category,age,salary,score,quantity,zeros,join_date,email,notes,code
+1,Sara,Aliyeva,Samarkand,HR,Closed,B,19,307.0,51.0,2,1,15/02/2024,user1@mail.com, average ,B-101
+2,John,Smith,Bukhara,IT,Pending,C,20,314.0,52.0,3,2,March 10 2024,user2@mail.com, excellent ,C-102
+3,Madina,Rasulova,Khiva,Finance,Open,RareX,21,321.0,53.0,4,3,2024/04/20,user3@mail.com, pending ,D-103
+4,Timur,Ergashev,Nukus,Operations,Closed,RareY,22,328.0,54.0,5,0,not_a_date,user4@mail.com, urgent ,E-104
+5,Laylo,Nazarova,Andijan,Marketing,Pending,A,23,335.0,55.0,6,1,,user5@mail.com, review ,A-105
+6,Ali,Karimov,Tashkent,Sales,Open,B,24,342.0,56.0,7,2,2024-01-15,user6@mail.com, good ,B-106
+7,Sara,Aliyeva,Samarkand,HR,Closed,C,25,349.0,57.0,8,3,15/02/2024,user7@mail.com, average ,C-107
+8,John,Smith,Bukhara,IT,Pending,RareX,26,356.0,58.0,9,0,March 10 2024,user8@mail.com, excellent ,D-108
+9,Madina,Rasulova,Khiva,Finance,open,RareY,27,363.0,59.0,1,1,2024/04/20,user9@mail.com, pending ,E-109
+10,Timur,Ergashev,Nukus,Operations,Closed,A,28,370.0,60.0,2,0,not_a_date,user10@mail.com, urgent ,A-110
+11,Laylo,Nazarova,Andijan,Marketing,Pending,B,29,377.0,61.0,3,3,,, review ,B-111
+12,Ali,Karimov,Tashkent,Sales,Open,C,30,384.0,62.0,4,0,2024-01-15,user12@mail.com, good ,C-112
+13,Sara,Aliyeva,,HR,Closed,RareX,31,391.0,63.0,5,1,15/02/2024,user13@mail.com, average ,D-113
+14,John,Smith,Bukhara,IT,Pending,OtherText,32,398.0,64.0,6,2,March 10 2024,user14@mail.com, excellent ,E-114
+14,Madina,Rasulova,Khiva,Finance,Open,A,33,405.0,65.0,7,3,2024/04/20,user15@mail.com, pending ,A-115
+16,Timur,Ergashev,Nukus,OPERATIONS,Unknown,B,34,412.0,66.0,8,0,not_a_date,user16@mail.com, urgent ,B-116
+17,Laylo,Nazarova,Andijan,Marketing,Pending,C,35,419.0,,9,1,,user17@mail.com, review ,C-117
+18,Ali,Karimov,Tashkent,Sales,open,RareX,36,426.0,68.0,1,2,2024-01-15,user18@mail.com, good ,D-118
+19,Sara,Aliyeva,Samarkand,HR,Closed,RareY,37,,69.0,2,3,15/02/2024,user19@mail.com, average ,E-119
+20,John,Smith,Bukhara,IT,Pending,A,38,440.0,70.0,3,0,March 10 2024,user20@mail.com, excellent ,A-120
+21,Madina,Rasulova,Khiva,Finance,Open,B,39,447.0,71.0,4,1,2024/04/20,user21@mail.com, pending ,B-121
+22,Timur,Ergashev,Nukus,Operations,Closed,C,40,454.0,72.0,5,2,not_a_date,, urgent ,C-122
+23,Laylo,Nazarova,Andijan,Marketing,Pending,RareX,41,461.0,73.0,6,3,,user23@mail.com, review ,D-123
+24,Ali,Karimov,Tashkent,SALES,Open,RareY,42,468.0,74.0,7,0,2024-01-15,user24@mail.com, good ,E-124
+25,Sara,Aliyeva,Samarkand,HR,Closed,A,43,475.0,75.0,8,1,15/02/2024,user25@mail.com, average ,A-125
+26,John,Smith,,IT,Pending,B,44,482.0,76.0,9,2,March 10 2024,user26@mail.com, excellent ,B-126
+27,Madina,Rasulova,Khiva,Finance,open,C,45,489.0,77.0,1,3,2024/04/20,user27@mail.com, pending ,C-127
+28,Timur,Ergashev,Nukus,Operations,Closed,OtherText,46,496.0,78.0,2,0,not_a_date,user28@mail.com, urgent ,D-128
+29,Laylo,Nazarova,Andijan,Marketing,Pending,RareY,47,503.0,79.0,3,1,,user29@mail.com, review ,E-129
+30,Ali,Karimov,Tashkent,Sales,Open,A,48,510.0,80.0,4,0,2024-01-15,user30@mail.com, good ,A-130
+31,Sara,Aliyeva,Samarkand,HR,Closed,B,49,517.0,81.0,5,3,15/02/2024,user31@mail.com, average ,B-131
+32,John,Smith,Bukhara,IT,Unknown,C,50,524.0,82.0,6,0,March 10 2024,user32@mail.com, excellent ,C-132
+33,Madina,Rasulova,Khiva,Finance,Open,RareX,51,5033.0,83.0,7,1,2024/04/20,, pending ,D-133
+34,Timur,Ergashev,Nukus,Operations,Closed,RareY,52,538.0,,8,2,not_a_date,user34@mail.com, urgent ,E-134
+35,Laylo,Nazarova,Andijan,Marketing,Pending,A,18,545.0,85.0,9,3,,user35@mail.com, review ,A-135
+36,Ali,Karimov,Tashkent,Sales,open,B,19,552.0,86.0,1,0,2024-01-15,user36@mail.com, good ,B-136
+37,Sara,Aliyeva,Samarkand,HR,Closed,C,20,559.0,87.0,2,1,15/02/2024,user37@mail.com, average ,C-137
+38,John,Smith,Bukhara,IT,Pending,RareX,21,,88.0,3,2,March 10 2024,user38@mail.com, excellent ,D-138
+39,Madina,Rasulova,,Finance,Open,RareY,22,573.0,89.0,4,3,2024/04/20,user39@mail.com, pending ,E-139
+40,Timur,Ergashev,Nukus,OPERATIONS,Closed,A,23,580.0,999.0,5,0,not_a_date,user40@mail.com, urgent ,A-140
+41,Laylo,Nazarova,Andijan,Marketing,Pending,B,24,587.0,91.0,6,1,,user41@mail.com, review ,B-141
+42,Ali,Karimov,Tashkent,Sales,Open,OtherText,25,594.0,92.0,7,2,2024-01-15,user42@mail.com, good ,C-142
+43,Sara,Aliyeva,Samarkand,HR,Closed,RareX,26,601.0,93.0,8,3,15/02/2024,user43@mail.com, average ,D-143
+44,John,Smith,Bukhara,IT,Pending,RareY,27,608.0,94.0,9,0,March 10 2024,, excellent ,E-144
+14,Madina,Rasulova,Khiva,Finance,open,A,28,615.0,95.0,1,1,2024/04/20,user45@mail.com, pending ,A-145
+46,Timur,Ergashev,Nukus,Operations,Closed,B,29,622.0,96.0,2,2,not_a_date,user46@mail.com, urgent ,B-146
+47,Laylo,Nazarova,Andijan,Marketing,Pending,C,30,629.0,97.0,3,3,,user47@mail.com, review ,C-147
+48,Ali,Karimov,Tashkent,SALES,Unknown,RareX,31,636.0,98.0,4,0,2024-01-15,user48@mail.com, good ,D-148
+49,Sara,Aliyeva,Samarkand,HR,Closed,RareY,32,643.0,99.0,5,1,15/02/2024,user49@mail.com, average ,E-149
+50,John,Smith,Bukhara,IT,Pending,A,33,650.0,100.0,6,0,March 10 2024,user50@mail.com, excellent ,A-150
+51,Madina,Rasulova,Khiva,Finance,Open,B,34,657.0,,7,3,2024/04/20,user51@mail.com, pending ,B-151
+52,Timur,Ergashev,,Operations,Closed,C,35,664.0,51.0,8,0,not_a_date,user52@mail.com, urgent ,C-152
+53,Laylo,Nazarova,Andijan,Marketing,Pending,RareX,36,671.0,52.0,9,1,,user53@mail.com, review ,D-153
+54,Ali,Karimov,Tashkent,Sales,open,RareY,37,678.0,53.0,1,2,2024-01-15,user54@mail.com, good ,E-154
+55,Sara,Aliyeva,Samarkand,HR,Closed,A,38,685.0,54.0,2,3,15/02/2024,, average ,A-155
+56,John,Smith,Bukhara,IT,Pending,OtherText,39,692.0,55.0,3,0,March 10 2024,user56@mail.com, excellent ,B-156
+57,Madina,Rasulova,Khiva,Finance,Open,C,40,,56.0,4,1,2024/04/20,user57@mail.com, pending ,C-157
+58,Timur,Ergashev,Nukus,Operations,Closed,RareX,41,706.0,57.0,5,2,not_a_date,user58@mail.com, urgent ,D-158
+59,Laylo,Nazarova,Andijan,Marketing,Pending,RareY,42,713.0,58.0,6,3,,user59@mail.com, review ,E-159
+60,Ali,Karimov,Tashkent,Sales,Open,A,43,720.0,59.0,7,0,2024-01-15,user60@mail.com, good ,A-160
+61,Sara,Aliyeva,Samarkand,HR,Closed,B,44,727.0,60.0,8,1,15/02/2024,user61@mail.com, average ,B-161
+62,John,Smith,Bukhara,IT,Pending,C,45,734.0,61.0,9,2,March 10 2024,user62@mail.com, excellent ,C-162
+63,Madina,Rasulova,Khiva,Finance,open,RareX,46,741.0,62.0,1,3,2024/04/20,user63@mail.com, pending ,D-163
+64,Timur,Ergashev,Nukus,OPERATIONS,Unknown,RareY,47,748.0,63.0,2,0,not_a_date,user64@mail.com, urgent ,E-164
+65,Laylo,Nazarova,,Marketing,Pending,A,48,755.0,64.0,3,1,,user65@mail.com, review ,A-165
+66,Ali,Karimov,Tashkent,Sales,Open,B,49,5066.0,65.0,4,2,2024-01-15,, good ,B-166
+67,Sara,Aliyeva,Samarkand,HR,Closed,C,50,769.0,66.0,5,3,15/02/2024,user67@mail.com, average ,C-167
+68,John,Smith,Bukhara,IT,Pending,RareX,51,776.0,,6,0,March 10 2024,user68@mail.com, excellent ,D-168
+69,Madina,Rasulova,Khiva,Finance,Open,RareY,52,783.0,68.0,7,1,2024/04/20,user69@mail.com, pending ,E-169
+70,Timur,Ergashev,Nukus,Operations,Closed,OtherText,18,790.0,69.0,8,0,not_a_date,user70@mail.com, urgent ,A-170
+71,Laylo,Nazarova,Andijan,Marketing,Pending,B,19,797.0,70.0,9,3,,user71@mail.com, review ,B-171
+72,Ali,Karimov,Tashkent,SALES,open,C,20,804.0,71.0,1,0,2024-01-15,user72@mail.com, good ,C-172
+73,Sara,Aliyeva,Samarkand,HR,Closed,RareX,21,811.0,72.0,2,1,15/02/2024,user73@mail.com, average ,D-173
+74,John,Smith,Bukhara,IT,Pending,RareY,22,818.0,73.0,3,2,March 10 2024,user74@mail.com, excellent ,E-174
+14,Madina,Rasulova,Khiva,Finance,Open,A,23,825.0,74.0,4,3,2024/04/20,user75@mail.com, pending ,A-175
+76,Timur,Ergashev,Nukus,Operations,Closed,B,24,,75.0,5,0,not_a_date,user76@mail.com, urgent ,B-176
+77,Laylo,Nazarova,Andijan,Marketing,Pending,C,25,839.0,76.0,6,1,,, review ,C-177
+78,Ali,Karimov,,Sales,Open,RareX,26,846.0,77.0,7,2,2024-01-15,user78@mail.com, good ,D-178
+79,Sara,Aliyeva,Samarkand,HR,Closed,RareY,27,853.0,78.0,8,3,15/02/2024,user79@mail.com, average ,E-179
+80,John,Smith,Bukhara,IT,Unknown,A,28,860.0,999.0,9,0,March 10 2024,user80@mail.com, excellent ,A-180
+81,Madina,Rasulova,Khiva,Finance,open,B,29,867.0,80.0,1,1,2024/04/20,user81@mail.com, pending ,B-181
+82,Timur,Ergashev,Nukus,Operations,Closed,C,30,874.0,81.0,2,2,not_a_date,user82@mail.com, urgent ,C-182
+83,Laylo,Nazarova,Andijan,Marketing,Pending,RareX,31,881.0,82.0,3,3,,user83@mail.com, review ,D-183
+84,Ali,Karimov,Tashkent,Sales,Open,OtherText,32,888.0,83.0,4,0,2024-01-15,user84@mail.com, good ,E-184
+85,Sara,Aliyeva,Samarkand,HR,Closed,A,33,895.0,,5,1,15/02/2024,user85@mail.com, average ,A-185
+86,John,Smith,Bukhara,IT,Pending,B,34,902.0,85.0,6,2,March 10 2024,user86@mail.com, excellent ,B-186
+87,Madina,Rasulova,Khiva,Finance,Open,C,35,909.0,86.0,7,3,2024/04/20,user87@mail.com, pending ,C-187
+88,Timur,Ergashev,Nukus,OPERATIONS,Closed,RareX,36,916.0,87.0,8,0,not_a_date,, urgent ,D-188
+89,Laylo,Nazarova,Andijan,Marketing,Pending,RareY,37,923.0,88.0,9,1,,user89@mail.com, review ,E-189
+90,Ali,Karimov,Tashkent,Sales,open,A,38,930.0,89.0,1,0,2024-01-15,user90@mail.com, good ,A-190
+91,Sara,Aliyeva,,HR,Closed,B,39,937.0,90.0,2,3,15/02/2024,user91@mail.com, average ,B-191
+92,John,Smith,Bukhara,IT,Pending,C,40,944.0,91.0,3,0,March 10 2024,user92@mail.com, excellent ,C-192
+93,Madina,Rasulova,Khiva,Finance,Open,RareX,41,951.0,92.0,4,1,2024/04/20,user93@mail.com, pending ,D-193
+94,Timur,Ergashev,Nukus,Operations,Closed,RareY,42,958.0,93.0,5,2,not_a_date,user94@mail.com, urgent ,E-194
+95,Laylo,Nazarova,Andijan,Marketing,Pending,A,43,,94.0,6,3,,user95@mail.com, review ,A-195
+96,Ali,Karimov,Tashkent,SALES,Unknown,B,44,972.0,95.0,7,0,2024-01-15,user96@mail.com, good ,B-196
+97,Sara,Aliyeva,Samarkand,HR,Closed,C,45,979.0,96.0,8,1,15/02/2024,user97@mail.com, average ,C-197
+98,John,Smith,Bukhara,IT,Pending,OtherText,46,986.0,97.0,9,2,March 10 2024,user98@mail.com, excellent ,D-198
+99,Madina,Rasulova,Khiva,Finance,open,RareY,47,5099.0,98.0,1,3,2024/04/20,, pending ,E-199
+100,Timur,Ergashev,Nukus,Operations,Closed,A,48,1000.0,99.0,2,0,not_a_date,user100@mail.com, urgent ,A-200
+101,Laylo,Nazarova,Andijan,Marketing,Pending,B,49,1007.0,100.0,3,1,,user101@mail.com, review ,B-201
+102,Ali,Karimov,Tashkent,Sales,Open,C,50,1014.0,,4,2,2024-01-15,user102@mail.com, good ,C-202
+103,Sara,Aliyeva,Samarkand,HR,Closed,RareX,51,1021.0,51.0,5,3,15/02/2024,user103@mail.com, average ,D-203
+104,John,Smith,,IT,Pending,RareY,52,1028.0,52.0,6,0,March 10 2024,user104@mail.com, excellent ,E-204
+105,Madina,Rasulova,Khiva,Finance,Open,A,18,1035.0,53.0,7,1,2024/04/20,user105@mail.com, pending ,A-205
+106,Timur,Ergashev,Nukus,Operations,Closed,B,19,1042.0,54.0,8,2,not_a_date,user106@mail.com, urgent ,B-206
+107,Laylo,Nazarova,Andijan,Marketing,Pending,C,20,1049.0,55.0,9,3,,user107@mail.com, review ,C-207
+108,Ali,Karimov,Tashkent,Sales,open,RareX,21,1056.0,56.0,1,0,2024-01-15,user108@mail.com, good ,D-208
+109,Sara,Aliyeva,Samarkand,HR,Closed,RareY,22,1063.0,57.0,2,1,15/02/2024,user109@mail.com, average ,E-209
+110,John,Smith,Bukhara,IT,Pending,A,23,1070.0,58.0,3,0,March 10 2024,, excellent ,A-210
+111,Madina,Rasulova,Khiva,Finance,Open,B,24,1077.0,59.0,4,3,2024/04/20,user111@mail.com, pending ,B-211
+112,Timur,Ergashev,Nukus,OPERATIONS,Unknown,OtherText,25,1084.0,60.0,5,0,not_a_date,user112@mail.com, urgent ,C-212
+113,Laylo,Nazarova,Andijan,Marketing,Pending,RareX,26,1091.0,61.0,6,1,,user113@mail.com, review ,D-213
+114,Ali,Karimov,Tashkent,Sales,Open,RareY,27,,62.0,7,2,2024-01-15,user114@mail.com, good ,E-214
+115,Sara,Aliyeva,Samarkand,HR,Closed,A,28,1105.0,63.0,8,3,15/02/2024,user115@mail.com, average ,A-215
+116,John,Smith,Bukhara,IT,Pending,B,29,1112.0,64.0,9,0,March 10 2024,user116@mail.com, excellent ,B-216
+117,Madina,Rasulova,,Finance,open,C,30,1119.0,65.0,1,1,2024/04/20,user117@mail.com, pending ,C-217
+118,Timur,Ergashev,Nukus,Operations,Closed,RareX,31,1126.0,66.0,2,2,not_a_date,user118@mail.com, urgent ,D-218
+119,Laylo,Nazarova,Andijan,Marketing,Pending,RareY,32,1133.0,,3,3,,user119@mail.com, review ,E-219
+120,Ali,Karimov,Tashkent,SALES,Open,A,33,1140.0,999.0,4,0,2024-01-15,user120@mail.com, good ,A-220
+6,Ali,Karimov,Tashkent,Sales,Open,B,24,342.0,56.0,7,2,2024-01-15,user6@mail.com, good ,B-106
+26,John,Smith,,IT,Pending,B,44,482.0,76.0,9,2,March 10 2024,user26@mail.com, excellent ,B-126
+51,Madina,Rasulova,Khiva,Finance,Open,B,34,657.0,,7,3,2024/04/20,user51@mail.com, pending ,B-151
