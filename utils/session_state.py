@@ -37,6 +37,9 @@ def initialize_session_state():
     if "validation_violations" not in st.session_state:
         st.session_state.validation_violations = []
 
+    if "validation_violations_df" not in st.session_state:
+        st.session_state.validation_violations_df = None
+
     # A dictionary storing profiling results (shape, dtypes, missing counts, etc.)
     if "profile_summary" not in st.session_state:
         st.session_state.profile_summary = {}
@@ -50,6 +53,12 @@ def initialize_session_state():
     # Stores a short summary of the last transformation action
     if "last_action_summary" not in st.session_state:
         st.session_state.last_action_summary = None
+    if "missing_snapshot" not in st.session_state:
+        st.session_state.missing_snapshot = None
+    if "outlier_snapshot" not in st.session_state:
+        st.session_state.outlier_snapshot = None
+    if "scaling_snapshot" not in st.session_state:
+        st.session_state.scaling_snapshot = None
 
 
 def data_is_loaded():

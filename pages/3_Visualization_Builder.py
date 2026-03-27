@@ -165,6 +165,63 @@ st.write(
     "Chart output will appear below once generation is added."
 )
 
+# --- Optional Data Filter ---
+st.write("**Optional: Filter Data Before Charting**")
+
+filter_enabled = st.checkbox(
+    label="Apply a column filter",
+    value=False,
+    key="chart_filter_enabled"
+)
+
+if filter_enabled:
+    filter_col = st.selectbox(
+        label="Select a column to filter by",
+        options=all_cols,
+        key="chart_filter_column"
+    )
+
+    # Get unique non-missing values for the selected filter column
+    filter_options = df[filter_col].dropna().unique().tolist()
+
+    if not filter_options:
+        st.warning(f"No non-missing values found in `{filter_col}` to filter by.")
+        filter_enabled = False
+    else:
+        filter_value = st.selectbox(
+            label=f"Show only rows where `{filter_col}` equals:",
+            options=filter_options,
+            key="chart_filter_value"
+        )
+        st.caption(
+            f"Filter active: `{filter_col}` = `{filter_value}` — "
+            f"{int((df[filter_col] == filter_value).sum())} matching row(s)."
+        )
+
+# --- Optional Group / Color Column ---
+st.write("**Optional: Group / Color By Column**")
+
+group_enabled = st.checkbox(
+    label="Apply a grouping column",
+    value=False,
+    key="chart_group_enabled"
+)
+
+group_col = None
+if group_enabled:
+    group_col = st.selectbox(
+        label="Select a categorical column to group/color by",
+        options=categorical_cols if categorical_cols else all_cols,
+        key="chart_group_column"
+    )
+    st.caption(
+        f"Grouping by `{group_col}` — "
+        f"{df[group_col].nunique()} unique group(s). "
+        "Supported on: Scatter Plot, Line Chart, Bar Chart."
+    )
+
+st.divider()
+
 # --- Reset Chart Controls ---
 if st.button("🔄 Reset Chart Controls", key="btn_reset_chart_controls"):
     # Clear only visualization-related session state keys
@@ -188,7 +245,7 @@ if st.button("🔄 Reset Chart Controls", key="btn_reset_chart_controls"):
 
 chart_type = st.selectbox(
     label="Chart Type",
-    options=["Histogram", "Bar Chart", "Line Chart", "Scatter Plot", "Box Plot", "Pie Chart"],
+    options=["Histogram", "Bar Chart", "Line Chart", "Scatter Plot", "Box Plot", "Pie Chart", "Correlation Heatmap"],
     key="chart_type"
 )
 
@@ -242,6 +299,21 @@ st.divider()
 
 # ---- Chart Output ----
 st.subheader("Chart Output")
+
+# Apply filter to get the dataframe that charts will actually use
+if filter_enabled and st.session_state.get("chart_filter_enabled"):
+    _fc = st.session_state.get("chart_filter_column")
+    _fv = st.session_state.get("chart_filter_value")
+    if _fc and _fc in df.columns and _fv is not None:
+        chart_df = df[df[_fc] == _fv].reset_index(drop=True)
+        st.info(
+            f"Charts are using filtered data: `{_fc}` = `{_fv}` "
+            f"— **{len(chart_df)}** row(s)."
+        )
+    else:
+        chart_df = df
+else:
+    chart_df = df  # no filter — use full working dataframe
 
 # --- Pre-flight column availability check ---
 # Before rendering any chart controls, verify required columns exist.
@@ -311,7 +383,7 @@ if chart_type == "Histogram":
         if st.button("Generate Histogram", key="btn_histogram"):
 
             # Drop missing values before plotting so matplotlib doesn't crash
-            plot_data = df[hist_column].dropna()
+            plot_data = chart_df[hist_column].dropna()
 
             if plot_data.empty:
                 st.warning(
@@ -350,10 +422,36 @@ elif chart_type == "Bar Chart":
             key="bar_column"
         )
 
+        # Top N control — optional filter
+        top_n_enabled = st.checkbox(
+            label="Show Top N categories only",
+            value=False,
+            key="bar_top_n_enabled"
+        )
+
+        top_n_value = None
+        if top_n_enabled:
+            top_n_value = st.number_input(
+                label="Number of top categories to show (N)",
+                min_value=1,
+                max_value=50,
+                value=10,
+                step=1,
+                key="bar_top_n_value"
+            )
+
         if st.button("Generate Bar Chart", key="btn_bar"):
 
-            # Compute value counts — drop missing values before counting
-            plot_data = df[bar_column].dropna().value_counts()
+            # Compute value counts — drop missing before counting
+            full_counts = chart_df[bar_column].dropna().value_counts()
+
+            # Apply Top N filter if enabled
+            if top_n_enabled and top_n_value:
+                plot_data = full_counts.head(int(top_n_value))
+                chart_subtitle = f" (Top {int(top_n_value)})"
+            else:
+                plot_data = full_counts
+                chart_subtitle = ""
 
             if plot_data.empty:
                 st.warning(
@@ -363,30 +461,59 @@ elif chart_type == "Bar Chart":
             else:
                 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-                ax.bar(
-                    plot_data.index.astype(str),
-                    plot_data.values,
-                    edgecolor="black",
-                    color=chart_color
-                )
+                if group_enabled and group_col and group_col in chart_df.columns:
+                    # Build a grouped counts table
+                    grouped = (
+                        chart_df.dropna(subset=[bar_column, group_col])
+                        .groupby([bar_column, group_col])
+                        .size()
+                        .unstack(fill_value=0)
+                    )
+                    if top_n_enabled and top_n_value:
+                        top_cats = plot_data.index.tolist()
+                        grouped = grouped.loc[
+                            grouped.index.isin(top_cats)
+                        ]
+                    grouped.plot(
+                        kind="bar",
+                        ax=ax,
+                        edgecolor="black",
+                        colormap="Set2"
+                    )
+                    ax.legend(title=group_col, bbox_to_anchor=(1.05, 1), loc="upper left")
+                else:
+                    ax.bar(
+                        plot_data.index.astype(str),
+                        plot_data.values,
+                        edgecolor="black",
+                        color=chart_color
+                    )
 
-                ax.set_title(custom_title if custom_title.strip() else f"Bar Chart of {bar_column}")
+                ax.set_title(
+                    custom_title if custom_title.strip()
+                    else f"Bar Chart of {bar_column}{chart_subtitle}"
+                )
                 ax.set_xlabel(custom_xlabel if custom_xlabel.strip() else bar_column)
                 ax.set_ylabel(custom_ylabel if custom_ylabel.strip() else "Count")
 
-                # Rotate x labels if there are many categories
                 if len(plot_data) > 6:
                     plt.xticks(rotation=45, ha="right")
 
                 plt.tight_layout()
                 st.pyplot(fig)
-                with st.expander("📋 Chart Data Preview", expanded=False):
-                    st.dataframe(
-                        plot_data.head(10).rename(bar_column),
-                        use_container_width=True
-                    )
                 get_chart_download_button(fig, "bar_chart.png")
                 plt.close(fig)
+
+                # Chart data preview — shows the filtered Top N table
+                st.write(
+                    f"**Chart Data Preview "
+                    f"({'Top ' + str(int(top_n_value)) if top_n_enabled and top_n_value else 'Full'}"
+                    f" — {len(plot_data)} categories):**"
+                )
+                preview_df = plot_data.reset_index()
+                preview_df.columns = [bar_column, "Count"]
+                preview_df.index = range(1, len(preview_df) + 1)
+                st.dataframe(preview_df, use_container_width=True)
 
 elif chart_type == "Line Chart":
 
@@ -411,7 +538,7 @@ elif chart_type == "Line Chart":
         if st.button("Generate Line Chart", key="btn_line"):
 
             # Drop rows where either the x or y column has a missing value
-            plot_data = df[[line_x, line_y]].dropna()
+            plot_data = chart_df[[line_x, line_y]].dropna()
 
             if plot_data.empty:
                 st.warning("No data available to plot after removing missing values.")
@@ -419,27 +546,41 @@ elif chart_type == "Line Chart":
             else:
                 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-                ax.plot(
-                    plot_data[line_x],
-                    plot_data[line_y],
-                    color=chart_color,
-                    linewidth=1.5
-                )
+                if group_enabled and group_col and group_col in chart_df.columns:
+                    groups = chart_df[group_col].dropna().unique()
+                    colors = plt.cm.Set2.colors
+                    for i, grp in enumerate(groups):
+                        grp_data = chart_df[chart_df[group_col] == grp][
+                            [line_x, line_y]
+                        ].dropna()
+                        if not grp_data.empty:
+                            ax.plot(
+                                grp_data[line_x],
+                                grp_data[line_y],
+                                label=str(grp),
+                                color=colors[i % len(colors)],
+                                linewidth=1.5
+                            )
+                    ax.legend(title=group_col, bbox_to_anchor=(1.05, 1), loc="upper left")
+                else:
+                    ax.plot(
+                        plot_data[line_x],
+                        plot_data[line_y],
+                        color=chart_color,
+                        linewidth=1.5
+                    )
 
-                ax.set_title(custom_title if custom_title.strip() else f"Line Chart of {line_y} over {line_x}")
+                ax.set_title(
+                    custom_title if custom_title.strip()
+                    else f"Line Chart of {line_y} over {line_x}"
+                )
                 ax.set_xlabel(custom_xlabel if custom_xlabel.strip() else line_x)
                 ax.set_ylabel(custom_ylabel if custom_ylabel.strip() else line_y)
 
-                # Rotate x labels if they are text-based or long
                 plt.xticks(rotation=45, ha="right")
                 plt.tight_layout()
 
                 st.pyplot(fig)
-                with st.expander("📋 Chart Data Preview", expanded=False):
-                    st.dataframe(
-                        plot_data[[line_x, line_y]].head(10),
-                        use_container_width=True
-                    )
                 get_chart_download_button(fig, "line_chart.png")
                 plt.close(fig)
 
@@ -466,7 +607,7 @@ elif chart_type == "Scatter Plot":
         if st.button("Generate Scatter Plot", key="btn_scatter"):
 
             # Drop rows where either column has a missing value
-            plot_data = df[[scatter_x, scatter_y]].dropna()
+            plot_data = chart_df[[scatter_x, scatter_y]].dropna()
 
             if plot_data.empty:
                 st.warning("No data available to plot after removing missing values.")
@@ -474,25 +615,41 @@ elif chart_type == "Scatter Plot":
             else:
                 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
-                ax.scatter(
-                    plot_data[scatter_x],
-                    plot_data[scatter_y],
-                    color=chart_color,
-                    alpha=0.6,
-                    edgecolors="black",
-                    linewidths=0.4
-                )
+                if group_enabled and group_col and group_col in plot_data.columns:
+                    # Plot each group with a different color
+                    groups = plot_data[group_col].dropna().unique()
+                    colors = plt.cm.Set2.colors
+                    for i, grp in enumerate(groups):
+                        grp_data = plot_data[plot_data[group_col] == grp]
+                        ax.scatter(
+                            grp_data[scatter_x],
+                            grp_data[scatter_y],
+                            label=str(grp),
+                            color=colors[i % len(colors)],
+                            alpha=0.6,
+                            edgecolors="black",
+                            linewidths=0.4
+                        )
+                    ax.legend(title=group_col, bbox_to_anchor=(1.05, 1), loc="upper left")
+                else:
+                    ax.scatter(
+                        plot_data[scatter_x],
+                        plot_data[scatter_y],
+                        color=chart_color,
+                        alpha=0.6,
+                        edgecolors="black",
+                        linewidths=0.4
+                    )
 
-                ax.set_title(custom_title if custom_title.strip() else f"Scatter Plot of {scatter_y} vs {scatter_x}")
+                ax.set_title(
+                    custom_title if custom_title.strip()
+                    else f"Scatter Plot of {scatter_y} vs {scatter_x}"
+                )
                 ax.set_xlabel(custom_xlabel if custom_xlabel.strip() else scatter_x)
                 ax.set_ylabel(custom_ylabel if custom_ylabel.strip() else scatter_y)
+
                 plt.tight_layout()
                 st.pyplot(fig)
-                with st.expander("📋 Chart Data Preview", expanded=False):
-                    st.dataframe(
-                        plot_data[[scatter_x, scatter_y]].head(10),
-                        use_container_width=True
-                    )
                 get_chart_download_button(fig, "scatter_chart.png")
                 plt.close(fig)
 
@@ -513,7 +670,7 @@ elif chart_type == "Box Plot":
         if st.button("Generate Box Plot", key="btn_box"):
 
             # Drop missing values before plotting
-            plot_data = df[box_column].dropna()
+            plot_data = chart_df[box_column].dropna()
 
             if plot_data.empty:
                 st.warning(
@@ -567,7 +724,7 @@ elif chart_type == "Pie Chart":
         if st.button("Generate Pie Chart", key="btn_pie"):
 
             # Compute value counts — drop missing values before counting
-            plot_data = df[pie_column].dropna().value_counts()
+            plot_data = chart_df[pie_column].dropna().value_counts()
 
             if plot_data.empty:
                 st.warning(
@@ -598,6 +755,86 @@ elif chart_type == "Pie Chart":
                 get_chart_download_button(fig, "pie_chart.png")
                 plt.close(fig)
 
+elif chart_type == "Correlation Heatmap":
+
+    st.write("Configure your correlation heatmap below.")
+
+    if len(numeric_cols) < 2:
+        st.warning(
+            "Correlation Heatmap requires at least two numeric columns. "
+            "Not enough found in the current dataset."
+        )
+
+    else:
+        # Let user optionally filter which numeric columns to include
+        heatmap_cols = st.multiselect(
+            label="Select numeric columns to include (leave blank for all)",
+            options=numeric_cols,
+            key="heatmap_cols"
+        )
+
+        # Fall back to all numeric columns if none selected
+        cols_to_use = heatmap_cols if heatmap_cols else numeric_cols
+
+        if len(cols_to_use) < 2:
+            st.warning("Please select at least two numeric columns.")
+
+        elif st.button("Generate Correlation Heatmap", key="btn_heatmap"):
+
+            corr_matrix = chart_df[cols_to_use].corr()
+
+            fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+            # Draw heatmap using imshow — safe matplotlib-native approach
+            # Heatmap uses its own diverging colormap (RdBu_r) for clarity
+            im = ax.imshow(
+                corr_matrix,
+                cmap="RdBu_r",
+                vmin=-1,
+                vmax=1,
+                aspect="auto"
+            )
+
+            # Add colorbar
+            plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+            # Set axis ticks and labels
+            ax.set_xticks(range(len(corr_matrix.columns)))
+            ax.set_yticks(range(len(corr_matrix.columns)))
+            ax.set_xticklabels(
+                corr_matrix.columns,
+                rotation=45,
+                ha="right",
+                fontsize=9
+            )
+            ax.set_yticklabels(corr_matrix.columns, fontsize=9)
+
+            # Annotate each cell with its correlation value
+            for i in range(len(corr_matrix)):
+                for j in range(len(corr_matrix.columns)):
+                    ax.text(
+                        j, i,
+                        f"{corr_matrix.iloc[i, j]:.2f}",
+                        ha="center",
+                        va="center",
+                        fontsize=8,
+                        color="black"
+                    )
+
+            ax.set_title(
+                custom_title if custom_title.strip()
+                else "Correlation Heatmap"
+            )
+
+            plt.tight_layout()
+            st.pyplot(fig)
+            get_chart_download_button(fig, "correlation_heatmap.png")
+            plt.close(fig)
+
+            # Show the correlation table as a chart data preview
+            st.write("**Correlation Table:**")
+            st.dataframe(corr_matrix.round(4), use_container_width=True)
+
 else:
-    st.info("Configure your settings above and click Generate to build a chart.")
+    st.info("Select a supported chart type from the menu above.")
 

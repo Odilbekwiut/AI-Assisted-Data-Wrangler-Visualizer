@@ -129,6 +129,59 @@ else:
 
 st.divider()
 
+# ---- Section 1b: Before / After Missing Values Preview ----
+st.subheader("Before / After Missing Values Preview")
+
+st.write(
+    "Take a snapshot of the current missing value counts before applying "
+    "a cleaning action. After the action runs the comparison will appear "
+    "automatically so you can see exactly what changed."
+)
+
+col_snap1, col_snap2 = st.columns(2)
+
+with col_snap1:
+    if st.button("📸 Take Snapshot", key="btn_take_missing_snapshot"):
+        # Store current missing counts per column as a simple dict
+        st.session_state.missing_snapshot = df.isnull().sum().to_dict()
+        st.success("✅ Snapshot taken — apply a missing-value action and return here to compare.")
+
+with col_snap2:
+    if st.button("🗑 Clear Snapshot", key="btn_clear_missing_snapshot"):
+        st.session_state.missing_snapshot = None
+        st.info("Snapshot cleared.")
+
+# Show comparison if a snapshot exists
+if st.session_state.get("missing_snapshot"):
+    snapshot = st.session_state.missing_snapshot
+    current_missing = df.isnull().sum().to_dict()
+
+    # Build comparison only for columns that had or now have missing values
+    comparison_rows = []
+    all_cols_union = set(snapshot.keys()) | set(current_missing.keys())
+
+    for col in all_cols_union:
+        before = snapshot.get(col, 0)
+        after = current_missing.get(col, 0)
+        diff = before - after
+        if before > 0 or after > 0:
+            comparison_rows.append({
+                "Column": col,
+                "Missing Before": before,
+                "Missing After": after,
+                "Filled / Removed": diff
+            })
+
+    if not comparison_rows:
+        st.info("No missing values detected in snapshot or current dataset.")
+    else:
+        import pandas as pd
+        comparison_df = pd.DataFrame(comparison_rows)
+        comparison_df.index = range(1, len(comparison_df) + 1)
+        st.dataframe(comparison_df, use_container_width=True)
+
+st.divider()
+
 # ---- Section 2: Fill Missing Values with a Constant ----
 st.subheader("Fill Missing Values with a Constant")
 
@@ -183,6 +236,240 @@ if st.button("Apply — Fill with Constant", key="btn_fill_constant"):
 
 st.divider()
 
+# ---- Section 2b: Fill Missing Values with Mean / Median / Mode ----
+st.subheader("Fill Missing Values with Mean / Median / Mode")
+
+st.write(
+    "Select a column and a statistical fill method. "
+    "Mean and Median are only available for numeric columns. "
+    "Mode works for any column type."
+)
+
+# Separate numeric and all columns for safe method filtering
+numeric_cols_fill = df.select_dtypes(include=["number"]).columns.tolist()
+all_cols_fill = df.columns.tolist()
+
+fill_stat_column = st.selectbox(
+    label="Select a column to fill",
+    options=all_cols_fill,
+    key="fill_stat_column"
+)
+
+# Determine which methods are valid for the selected column
+is_numeric_col = fill_stat_column in numeric_cols_fill
+available_methods = ["Mean", "Median", "Mode"] if is_numeric_col else ["Mode"]
+
+if not is_numeric_col:
+    st.info("Mean and Median are only available for numeric columns. Mode will be used.")
+
+fill_stat_method = st.selectbox(
+    label="Fill method",
+    options=available_methods,
+    key="fill_stat_method"
+)
+
+if st.button("Apply — Fill with Statistic", key="btn_fill_statistic"):
+
+    missing_before = int(df[fill_stat_column].isnull().sum())
+
+    if missing_before == 0:
+        st.info(
+            f"Nothing to change — no missing values found in `{fill_stat_column}`."
+        )
+
+    else:
+        # Calculate the fill value based on chosen method
+        fill_val = None
+        method_used = fill_stat_method.lower()
+
+        if fill_stat_method == "Mean":
+            fill_val = df[fill_stat_column].mean()
+
+        elif fill_stat_method == "Median":
+            fill_val = df[fill_stat_column].median()
+
+        elif fill_stat_method == "Mode":
+            mode_result = df[fill_stat_column].mode()
+            if mode_result.empty:
+                st.warning(
+                    f"⚠️ Could not compute mode for `{fill_stat_column}`. "
+                    "The column may have no non-missing values."
+                )
+                st.stop()
+            fill_val = mode_result.iloc[0]
+
+        # Apply the fill
+        updated_df = df.copy()
+        updated_df[fill_stat_column] = updated_df[fill_stat_column].fillna(fill_val)
+        missing_after = int(updated_df[fill_stat_column].isnull().sum())
+
+        # Save undo state and update session
+        st.session_state.undo_stack = df.copy()
+        st.session_state.working_df = updated_df
+
+        log_entry = build_log_entry(
+            operation="fill_missing_with_statistic",
+            columns=[fill_stat_column],
+            parameters={
+                "method": fill_stat_method,
+                "fill_value": round(float(fill_val), 4) if isinstance(fill_val, float) else str(fill_val)
+            }
+        )
+        st.session_state.transformation_log.append(log_entry)
+
+        set_last_action_summary(
+            "Fill Missing with Statistic",
+            f"Filled `{fill_stat_column}` using {fill_stat_method}"
+        )
+
+        st.success(
+            f"✅ Done — filled **{missing_before}** missing value(s) in "
+            f"`{fill_stat_column}` using **{fill_stat_method}** "
+            f"(`{round(float(fill_val), 4) if isinstance(fill_val, float) else fill_val}`). "
+            f"Missing before: **{missing_before}** → after: **{missing_after}**."
+        )
+        st.rerun()
+
+st.divider()
+
+# ---- Section 2c: Fill Missing Values with Forward Fill / Backward Fill ----
+st.subheader("Fill Missing Values with Forward Fill / Backward Fill")
+
+st.write(
+    "Forward Fill copies the last known value downward to fill gaps. "
+    "Backward Fill copies the next known value upward. "
+    "Useful for ordered data like time series."
+)
+
+ffill_column = st.selectbox(
+    label="Select a column to fill",
+    options=df.columns.tolist(),
+    key="ffill_column"
+)
+
+ffill_method = st.selectbox(
+    label="Fill method",
+    options=["Forward Fill", "Backward Fill"],
+    key="ffill_method"
+)
+
+if st.button("Apply — Forward / Backward Fill", key="btn_ffill"):
+
+    missing_before = int(df[ffill_column].isnull().sum())
+
+    if missing_before == 0:
+        st.info(
+            f"Nothing to change — no missing values found in `{ffill_column}`."
+        )
+
+    else:
+        updated_df = df.copy()
+
+        if ffill_method == "Forward Fill":
+            updated_df[ffill_column] = updated_df[ffill_column].ffill()
+        else:
+            updated_df[ffill_column] = updated_df[ffill_column].bfill()
+
+        missing_after = int(updated_df[ffill_column].isnull().sum())
+
+        # Save undo state and update session
+        st.session_state.undo_stack = df.copy()
+        st.session_state.working_df = updated_df
+
+        log_entry = build_log_entry(
+            operation="fill_missing_forward_backward",
+            columns=[ffill_column],
+            parameters={"method": ffill_method}
+        )
+        st.session_state.transformation_log.append(log_entry)
+
+        set_last_action_summary(
+            "Forward / Backward Fill",
+            f"Filled `{ffill_column}` using {ffill_method}"
+        )
+
+        st.success(
+            f"✅ Done — applied **{ffill_method}** to `{ffill_column}`. "
+            f"Missing before: **{missing_before}** → after: **{missing_after}**."
+        )
+        st.rerun()
+
+st.divider()
+
+# ---- Section 2d: Fill Missing Values with Most Frequent Category ----
+st.subheader("Fill Missing Values with Most Frequent Category")
+
+st.write(
+    "Fills missing values in a selected column using the most frequently "
+    "occurring non-missing value. Works for any column type but is most "
+    "useful for categorical and text columns."
+)
+
+most_freq_column = st.selectbox(
+    label="Select a column to fill",
+    options=df.columns.tolist(),
+    key="most_freq_column"
+)
+
+# Show the most frequent value as a helpful preview before the user clicks
+most_freq_preview = df[most_freq_column].mode()
+if not most_freq_preview.empty:
+    st.caption(
+        f"Most frequent value in `{most_freq_column}`: "
+        f"**{most_freq_preview.iloc[0]}**"
+    )
+
+if st.button("Apply — Fill with Most Frequent", key="btn_fill_most_freq"):
+
+    missing_before = int(df[most_freq_column].isnull().sum())
+
+    if missing_before == 0:
+        st.info(
+            f"Nothing to change — no missing values found in `{most_freq_column}`."
+        )
+
+    else:
+        # Compute the most frequent non-missing value
+        mode_result = df[most_freq_column].mode()
+
+        if mode_result.empty:
+            st.warning(
+                f"⚠️ Could not find a non-missing value to use in "
+                f"`{most_freq_column}`. The column may be entirely empty."
+            )
+
+        else:
+            fill_val = mode_result.iloc[0]
+
+            updated_df = df.copy()
+            updated_df[most_freq_column] = updated_df[most_freq_column].fillna(fill_val)
+            missing_after = int(updated_df[most_freq_column].isnull().sum())
+
+            # Save undo state and update session
+            st.session_state.undo_stack = df.copy()
+            st.session_state.working_df = updated_df
+
+            log_entry = build_log_entry(
+                operation="fill_missing_most_frequent",
+                columns=[most_freq_column],
+                parameters={"fill_value": str(fill_val)}
+            )
+            st.session_state.transformation_log.append(log_entry)
+
+            set_last_action_summary(
+                "Fill with Most Frequent",
+                f"Filled `{most_freq_column}` with most frequent value: `{fill_val}`"
+            )
+
+            st.success(
+                f"✅ Done — filled `{most_freq_column}` with most frequent value "
+                f"`{fill_val}`. "
+                f"Missing before: **{missing_before}** → after: **{missing_after}**."
+            )
+            st.rerun()
+
+st.divider()
+
 # ---- Section 3: Drop Rows with Missing Values ----
 st.subheader("Drop Rows with Missing Values")
 
@@ -228,6 +515,76 @@ if st.button("Apply — Drop Rows", key="btn_drop_missing"):
             )
             set_last_action_summary("Drop Rows", f"Removed {rows_removed} row(s) with missing values")
             st.rerun()
+
+st.divider()
+
+# ---- Section 3b: Drop Columns Above Missing Threshold ----
+st.subheader("Drop Columns Above Missing Threshold (%)")
+
+st.write(
+    "Set a missing-value percentage threshold. "
+    "Any column where more than that percentage of values are missing "
+    "will be automatically dropped from the dataset."
+)
+
+missing_threshold = st.slider(
+    label="Maximum allowed missing percentage (%)",
+    min_value=1,
+    max_value=100,
+    value=50,
+    step=1,
+    key="missing_threshold_pct"
+)
+
+# Show a compact preview of which columns would be affected
+missing_pct_series = (df.isnull().sum() / len(df) * 100).round(2)
+cols_to_drop_thresh = missing_pct_series[missing_pct_series > missing_threshold].index.tolist()
+
+if cols_to_drop_thresh:
+    st.warning(
+        f"**{len(cols_to_drop_thresh)}** column(s) exceed {missing_threshold}% missing: "
+        f"{', '.join(cols_to_drop_thresh)}"
+    )
+else:
+    st.info(f"No columns exceed {missing_threshold}% missing with the current threshold.")
+
+if st.button("Apply — Drop Columns by Missing Threshold", key="btn_drop_cols_threshold"):
+
+    if not cols_to_drop_thresh:
+        st.info(
+            f"Nothing to change — no columns exceed {missing_threshold}% missing values."
+        )
+
+    else:
+        cols_before = df.shape[1]
+        updated_df = df.drop(columns=cols_to_drop_thresh)
+        cols_after = updated_df.shape[1]
+
+        # Save undo state before modifying
+        st.session_state.undo_stack = df.copy()
+        st.session_state.working_df = updated_df
+
+        log_entry = build_log_entry(
+            operation="drop_columns_above_missing_threshold",
+            columns=cols_to_drop_thresh,
+            parameters={
+                "threshold_pct": missing_threshold,
+                "columns_dropped": len(cols_to_drop_thresh)
+            }
+        )
+        st.session_state.transformation_log.append(log_entry)
+
+        set_last_action_summary(
+            "Drop Columns by Missing Threshold",
+            f"Dropped {len(cols_to_drop_thresh)} column(s) above {missing_threshold}% missing"
+        )
+
+        st.success(
+            f"✅ Done — dropped **{len(cols_to_drop_thresh)}** column(s): "
+            f"{', '.join(cols_to_drop_thresh)}. "
+            f"Columns before: **{cols_before}** → after: **{cols_after}**."
+        )
+        st.rerun()
 
 st.divider()
 
@@ -393,26 +750,247 @@ target_type = st.selectbox(
     key="convert_target_type"
 )
 
+# --- Extra controls shown only when datetime is selected ---
+datetime_parse_mode = None
+datetime_custom_format = None
+
+if target_type == "datetime":
+    st.write("**Datetime Parse Options**")
+    datetime_parse_mode = st.selectbox(
+        label="Parse mode",
+        options=["Auto Parse", "Custom Format"],
+        help=(
+            "Auto Parse — pandas will try to detect the format automatically. "
+            "Custom Format — you specify the exact format string (e.g. %d/%m/%Y)."
+        ),
+        key="datetime_parse_mode"
+    )
+
+    if datetime_parse_mode == "Custom Format":
+        datetime_custom_format = st.text_input(
+            label="Datetime format string",
+            placeholder="e.g. %d/%m/%Y or %Y-%m-%d %H:%M:%S",
+            key="datetime_custom_format"
+        )
+        st.caption(
+            "Common formats: `%d/%m/%Y` · `%Y-%m-%d` · `%m-%d-%Y` · "
+            "`%Y-%m-%d %H:%M:%S`"
+        )
+
 if st.button("Apply — Convert Types", key="btn_convert_types"):
 
     if not columns_to_convert:
         st.error("Please select at least one column.")
 
+    elif target_type == "datetime" and datetime_parse_mode == "Custom Format" and not datetime_custom_format:
+        st.error("Please enter a datetime format string or switch to Auto Parse.")
+
     else:
-        updated_df = convert_column_types(df, columns_to_convert, target_type)
-        st.session_state.undo_stack = df.copy()
-        st.session_state.working_df = updated_df
+        updated_df = df.copy()
 
-        log_entry = build_log_entry(
-            operation="convert_column_types",
-            columns=columns_to_convert,
-            parameters={"target_type": target_type}
-        )
-        st.session_state.transformation_log.append(log_entry)
+        # Handle datetime separately for richer parsing control
+        if target_type == "datetime":
+            for col in columns_to_convert:
+                non_null_before = int(updated_df[col].notna().sum())
 
-        st.success(f"✅ Done — converted **{len(columns_to_convert)}** column(s) to `{target_type}`.")
-        set_last_action_summary("Convert Types", f"Converted {len(columns_to_convert)} column(s) to {target_type}")
+                if datetime_parse_mode == "Custom Format" and datetime_custom_format:
+                    updated_df[col] = pd.to_datetime(
+                        updated_df[col],
+                        format=datetime_custom_format.strip(),
+                        errors="coerce"
+                    )
+                else:
+                    # Auto parse — let pandas infer the format safely
+                    updated_df[col] = pd.to_datetime(
+                        updated_df[col],
+                        infer_datetime_format=True,
+                        errors="coerce"
+                    )
+
+                successfully_parsed = int(updated_df[col].notna().sum())
+                failed_count = non_null_before - successfully_parsed
+
+            # Build log parameters
+            dt_params = {
+                "target_type": "datetime",
+                "parse_mode": datetime_parse_mode or "Auto Parse"
+            }
+            if datetime_parse_mode == "Custom Format" and datetime_custom_format:
+                dt_params["custom_format"] = datetime_custom_format.strip()
+            dt_params["columns"] = columns_to_convert
+
+            st.session_state.undo_stack = df.copy()
+            st.session_state.working_df = updated_df
+
+            log_entry = build_log_entry(
+                operation="convert_to_datetime",
+                columns=columns_to_convert,
+                parameters=dt_params
+            )
+            st.session_state.transformation_log.append(log_entry)
+
+            set_last_action_summary(
+                "Convert to Datetime",
+                f"Parsed {len(columns_to_convert)} column(s) — "
+                f"mode: {datetime_parse_mode or 'Auto Parse'}"
+            )
+
+            # Show compact before/after for the last processed column
+            st.success(
+                f"✅ Done — converted **{len(columns_to_convert)}** column(s) to datetime "
+                f"using **{datetime_parse_mode or 'Auto Parse'}**. "
+                f"Successfully parsed: **{successfully_parsed}** · "
+                f"Failed (NaT): **{failed_count}**."
+            )
+
+        else:
+            # All other types — use existing helper
+            updated_df = convert_column_types(df, columns_to_convert, target_type)
+
+            st.session_state.undo_stack = df.copy()
+            st.session_state.working_df = updated_df
+
+            log_entry = build_log_entry(
+                operation="convert_column_types",
+                columns=columns_to_convert,
+                parameters={"target_type": target_type}
+            )
+            st.session_state.transformation_log.append(log_entry)
+
+            set_last_action_summary(
+                "Convert Types",
+                f"Converted {len(columns_to_convert)} column(s) to `{target_type}`"
+            )
+
+            st.success(
+                f"✅ Done — converted **{len(columns_to_convert)}** column(s) to "
+                f"`{target_type}`."
+            )
+
         st.rerun()
+
+st.divider()
+
+# ---- Section 7b: Dirty Numeric String Cleaning ----
+st.subheader("Dirty Numeric String Cleaning")
+
+st.write(
+    "Select a column that contains numbers stored as messy text — "
+    "for example values like `$1,200.50`, `€ 900`, or `75%`. "
+    "This tool strips common noise characters and converts the result to numeric. "
+    "Values that still cannot be converted will become NaN safely."
+)
+
+# Show only object/string columns since numeric columns don't need this
+dirty_numeric_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
+
+if not dirty_numeric_cols:
+    st.info("No text or category columns found in the current dataset.")
+
+else:
+    dirty_col = st.selectbox(
+        label="Select a column to clean and convert",
+        options=dirty_numeric_cols,
+        key="dirty_numeric_column"
+    )
+
+    st.write("**Characters to strip before conversion:**")
+
+    strip_col1, strip_col2, strip_col3 = st.columns(3)
+
+    with strip_col1:
+        strip_commas   = st.checkbox("Commas  `,`",          value=True, key="strip_commas")
+        strip_spaces   = st.checkbox("Spaces  ` `",          value=True, key="strip_spaces")
+
+    with strip_col2:
+        strip_dollar   = st.checkbox("Dollar  `$`",          value=True, key="strip_dollar")
+        strip_euro     = st.checkbox("Euro  `€`",            value=True, key="strip_euro")
+
+    with strip_col3:
+        strip_pound    = st.checkbox("Pound  `£`",           value=True, key="strip_pound")
+        strip_percent  = st.checkbox("Percent  `%`",         value=True, key="strip_percent")
+
+    # Show a small preview of raw values before cleaning
+    st.caption("Sample raw values from selected column:")
+    st.write(df[dirty_col].dropna().head(5).tolist())
+
+    if st.button("Apply — Clean and Convert to Numeric", key="btn_dirty_numeric"):
+
+        non_null_before = int(df[dirty_col].notna().sum())
+
+        if non_null_before == 0:
+            st.info(f"Nothing to change — `{dirty_col}` has no non-missing values.")
+
+        else:
+            updated_df = df.copy()
+
+            # Build the set of characters to strip based on user selections
+            chars_to_strip = ""
+            stripped_chars = []
+
+            if strip_commas:
+                chars_to_strip += ","
+                stripped_chars.append("commas")
+            if strip_spaces:
+                chars_to_strip += " "
+                stripped_chars.append("spaces")
+            if strip_dollar:
+                chars_to_strip += "$"
+                stripped_chars.append("$")
+            if strip_euro:
+                chars_to_strip += "€"
+                stripped_chars.append("€")
+            if strip_pound:
+                chars_to_strip += "£"
+                stripped_chars.append("£")
+            if strip_percent:
+                chars_to_strip += "%"
+                stripped_chars.append("%")
+
+            # Apply character stripping using str.replace for each character
+            cleaned_series = updated_df[dirty_col].astype(str)
+
+            for char in chars_to_strip:
+                cleaned_series = cleaned_series.str.replace(char, "", regex=False)
+
+            # Strip any remaining outer whitespace after removal
+            cleaned_series = cleaned_series.str.strip()
+
+            # Replace empty strings with NaN before numeric conversion
+            cleaned_series = cleaned_series.replace("", float("nan"))
+
+            # Convert to numeric safely — failures become NaN
+            updated_df[dirty_col] = pd.to_numeric(cleaned_series, errors="coerce")
+
+            successfully_converted = int(updated_df[dirty_col].notna().sum())
+            failed_count = non_null_before - successfully_converted
+
+            # Save undo state and update session
+            st.session_state.undo_stack = df.copy()
+            st.session_state.working_df = updated_df
+
+            log_entry = build_log_entry(
+                operation="dirty_numeric_string_cleaning",
+                columns=[dirty_col],
+                parameters={
+                    "stripped_characters": stripped_chars,
+                    "converted_to": "numeric"
+                }
+            )
+            st.session_state.transformation_log.append(log_entry)
+
+            set_last_action_summary(
+                "Dirty Numeric Cleaning",
+                f"Cleaned and converted `{dirty_col}` to numeric"
+            )
+
+            st.success(
+                f"✅ Done — cleaned `{dirty_col}` and converted to numeric. "
+                f"Non-null before: **{non_null_before}** · "
+                f"Successfully converted: **{successfully_converted}** · "
+                f"Failed (NaN): **{failed_count}**."
+            )
+            st.rerun()
 
 st.divider()
 
@@ -532,6 +1110,106 @@ if st.button("Apply — Replace Values", key="btn_replace_values"):
         set_last_action_summary("Replace Values", f"Replaced '{old_value_input}' with '{new_value_input}'")
         st.rerun()
 
+st.divider()
+
+# ---- Section 9b: Mapping Dictionary UI Table Editor ----
+st.subheader("Mapping Dictionary — Bulk Value Replacement")
+
+st.write(
+    "Enter multiple old → new value pairs in the table below. "
+    "All non-empty mappings will be applied to the selected column at once. "
+    "Useful for renaming several category labels in one step."
+)
+
+mapping_column = st.selectbox(
+    label="Select a column to apply mappings to",
+    options=df.columns.tolist(),
+    key="mapping_dict_column"
+)
+
+# Show current unique values as a hint
+unique_vals = df[mapping_column].dropna().unique().tolist()
+st.caption(
+    f"Current unique values in `{mapping_column}` "
+    f"({min(len(unique_vals), 10)} shown): "
+    f"{', '.join(str(v) for v in unique_vals[:10])}"
+)
+
+st.write("**Edit your value mapping below:**")
+
+# Build a default editable table with 6 empty rows
+default_mapping = pd.DataFrame({
+    "old_value": [""] * 6,
+    "new_value": [""] * 6
+})
+
+mapping_table = st.data_editor(
+    default_mapping,
+    use_container_width=True,
+    num_rows="dynamic",     # allows user to add/remove rows
+    key="mapping_dict_table"
+)
+
+if st.button("Apply — Bulk Mapping", key="btn_apply_mapping"):
+
+    # Filter out rows where either field is empty
+    valid_rows = mapping_table[
+        (mapping_table["old_value"].astype(str).str.strip() != "") &
+        (mapping_table["new_value"].astype(str).str.strip() != "")
+    ]
+
+    if valid_rows.empty:
+        st.error("Please enter at least one complete old → new mapping pair.")
+
+    else:
+        # Build the mapping dictionary from valid rows
+        mapping_dict = dict(
+            zip(
+                valid_rows["old_value"].astype(str).str.strip(),
+                valid_rows["new_value"].astype(str).str.strip()
+            )
+        )
+
+        updated_df = df.copy()
+
+        # Count how many values will actually change before applying
+        values_changed = int(
+            updated_df[mapping_column].astype(str).isin(mapping_dict.keys()).sum()
+        )
+
+        # Apply the mapping — values not in the dict are left unchanged
+        updated_df[mapping_column] = (
+            updated_df[mapping_column].astype(str).replace(mapping_dict)
+        )
+
+        # Save undo state and update session
+        st.session_state.undo_stack = df.copy()
+        st.session_state.working_df = updated_df
+
+        log_entry = build_log_entry(
+            operation="mapping_dict_replacement",
+            columns=[mapping_column],
+            parameters={
+                "mapping_pairs": len(mapping_dict),
+                "values_changed": values_changed,
+                "mapping": mapping_dict
+            }
+        )
+        st.session_state.transformation_log.append(log_entry)
+
+        set_last_action_summary(
+            "Bulk Mapping Replacement",
+            f"Applied {len(mapping_dict)} mapping(s) to `{mapping_column}` "
+            f"— {values_changed} value(s) changed"
+        )
+
+        st.success(
+            f"✅ Done — applied **{len(mapping_dict)}** mapping pair(s) to "
+            f"`{mapping_column}`. "
+            f"Values changed: **{values_changed}**."
+        )
+        st.rerun()
+
 # ---- Section 10: Group Rare Categories ----
 st.markdown('<a name="category-tools"></a>', unsafe_allow_html=True)
 st.subheader("Group Rare Categories")
@@ -649,6 +1327,188 @@ else:
             )
             st.dataframe(outlier_rows, use_container_width=True)
 
+st.divider()
+
+# ---- Section 12b: Cap / Winsorize Outliers (IQR Method) ----
+st.subheader("Cap / Winsorize Outliers (IQR Method)")
+
+st.write(
+    "Instead of removing outlier rows, this tool caps extreme values at the "
+    "IQR bounds. Values below Q1 − 1.5×IQR are raised to the lower bound. "
+    "Values above Q3 + 1.5×IQR are lowered to the upper bound. "
+    "No rows are removed."
+)
+
+numeric_cols_for_cap = df.select_dtypes(include=["number"]).columns.tolist()
+
+if not numeric_cols_for_cap:
+    st.info("No numeric columns found in the current dataset.")
+
+else:
+    cap_column = st.selectbox(
+        label="Select a numeric column to cap",
+        options=numeric_cols_for_cap,
+        key="cap_outlier_column"
+    )
+
+    # Calculate and preview IQR bounds before user clicks
+    col_data = df[cap_column].dropna()
+    q1 = col_data.quantile(0.25)
+    q3 = col_data.quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = round(q1 - 1.5 * iqr, 4)
+    upper_bound = round(q3 + 1.5 * iqr, 4)
+
+    low_outlier_count  = int((df[cap_column] < lower_bound).sum())
+    high_outlier_count = int((df[cap_column] > upper_bound).sum())
+
+    # Show bounds preview so user knows what will be capped
+    prev_col1, prev_col2, prev_col3, prev_col4 = st.columns(4)
+    prev_col1.metric("Lower Bound", lower_bound)
+    prev_col2.metric("Upper Bound", upper_bound)
+    prev_col3.metric("Values Below Bound", low_outlier_count)
+    prev_col4.metric("Values Above Bound", high_outlier_count)
+
+    if st.button("Apply — Cap Outliers", key="btn_cap_outliers"):
+
+        if low_outlier_count == 0 and high_outlier_count == 0:
+            st.info(
+                f"Nothing to change — no outliers found in "
+                f"`{cap_column}` using the IQR method."
+            )
+
+        else:
+            updated_df = df.copy()
+
+            # Clip values to the IQR bounds — values outside are pulled to the bound
+            updated_df[cap_column] = updated_df[cap_column].clip(
+                lower=lower_bound,
+                upper=upper_bound
+            )
+
+            # Save undo state and update session
+            st.session_state.undo_stack = df.copy()
+            st.session_state.working_df = updated_df
+
+            log_entry = build_log_entry(
+                operation="cap_outliers_iqr",
+                columns=[cap_column],
+                parameters={
+                    "lower_bound": lower_bound,
+                    "upper_bound": upper_bound,
+                    "low_values_capped": low_outlier_count,
+                    "high_values_capped": high_outlier_count
+                }
+            )
+            st.session_state.transformation_log.append(log_entry)
+
+            set_last_action_summary(
+                "Cap / Winsorize Outliers",
+                f"Capped `{cap_column}` — "
+                f"{low_outlier_count} low, {high_outlier_count} high value(s) capped"
+            )
+
+            st.success(
+                f"✅ Done — outliers in `{cap_column}` capped to IQR bounds. "
+                f"Lower bound: **{lower_bound}** · Upper bound: **{upper_bound}** · "
+                f"Low values capped: **{low_outlier_count}** · "
+                f"High values capped: **{high_outlier_count}**."
+            )
+            st.rerun()
+
+st.divider()
+
+# ---- Section 11b: Outlier Impact Summary (Before / After) ----
+st.subheader("Outlier Impact Summary (Before / After)")
+
+st.write(
+    "Take a snapshot of current outlier counts before applying a removal "
+    "or capping action. The comparison will appear automatically "
+    "so you can see exactly what changed."
+)
+
+# Column selector for the snapshot
+numeric_cols_for_snapshot = df.select_dtypes(include=["number"]).columns.tolist()
+
+if not numeric_cols_for_snapshot:
+    st.info("No numeric columns found in the current dataset.")
+
+else:
+    snapshot_col = st.selectbox(
+        label="Select a numeric column to track",
+        options=numeric_cols_for_snapshot,
+        key="outlier_snapshot_column"
+    )
+
+    snap_col1, snap_col2 = st.columns(2)
+
+    with snap_col1:
+        if st.button("📸 Take Outlier Snapshot", key="btn_take_outlier_snapshot"):
+
+            # Calculate IQR bounds and outlier count for selected column
+            col_data = df[snapshot_col].dropna()
+            q1 = col_data.quantile(0.25)
+            q3 = col_data.quantile(0.75)
+            iqr = q3 - q1
+            lb = round(q1 - 1.5 * iqr, 4)
+            ub = round(q3 + 1.5 * iqr, 4)
+            outlier_count = int(
+                ((df[snapshot_col] < lb) | (df[snapshot_col] > ub)).sum()
+            )
+
+            st.session_state.outlier_snapshot = {
+                "column":        snapshot_col,
+                "row_count":     len(df),
+                "outlier_count": outlier_count,
+                "lower_bound":   lb,
+                "upper_bound":   ub
+            }
+            st.success(
+                f"✅ Snapshot taken for `{snapshot_col}` — "
+                f"{outlier_count} outlier(s) detected."
+            )
+
+    with snap_col2:
+        if st.button("🗑 Clear Outlier Snapshot", key="btn_clear_outlier_snapshot"):
+            st.session_state.outlier_snapshot = None
+            st.info("Outlier snapshot cleared.")
+
+    # Show before/after comparison if snapshot exists
+    if st.session_state.get("outlier_snapshot"):
+        snap = st.session_state.outlier_snapshot
+        tracked_col = snap["column"]
+
+        # Recalculate current outlier state for the same column
+        if tracked_col in df.columns:
+            curr_data = df[tracked_col].dropna()
+            curr_outliers = int(
+                (
+                    (df[tracked_col] < snap["lower_bound"]) |
+                    (df[tracked_col] > snap["upper_bound"])
+                ).sum()
+            )
+            curr_rows = len(df)
+
+            st.write("**Outlier Impact Comparison:**")
+
+            cmp1, cmp2, cmp3, cmp4 = st.columns(4)
+            cmp1.metric("Column",          tracked_col)
+            cmp2.metric("Rows Before",     snap["row_count"],
+                        delta=curr_rows - snap["row_count"])
+            cmp3.metric("Outliers Before", snap["outlier_count"])
+            cmp4.metric("Outliers After",  curr_outliers,
+                        delta=curr_outliers - snap["outlier_count"])
+
+            st.caption(
+                f"Bounds used: Lower **{snap['lower_bound']}** · "
+                f"Upper **{snap['upper_bound']}**"
+            )
+        else:
+            st.info(
+                f"Column `{tracked_col}` from snapshot no longer exists "
+                "in the current dataset."
+            )
+
 # ---- Section 12: Remove Outlier Rows (IQR Method) ----
 st.subheader("Remove Outlier Rows (IQR Method)")
 
@@ -696,6 +1556,109 @@ else:
             st.success(f"✅ Done — removed **{summary['Removed Count']}** outlier row(s) from `{outlier_removal_column}`. Dataset now has **{len(updated_df)} rows × {updated_df.shape[1]} columns**.")
             set_last_action_summary("Remove Outliers", f"Removed {summary['Removed Count']} outlier row(s) from '{outlier_removal_column}'")
             st.rerun()
+
+st.divider()
+
+# ---- Section 12c: Before / After Scaling Statistics ----
+st.subheader("Before / After Scaling Statistics")
+
+st.write(
+    "Take a snapshot of current column statistics before applying "
+    "a scaling action. The comparison will appear automatically "
+    "after scaling so you can verify the result."
+)
+
+numeric_cols_for_scale_snap = df.select_dtypes(include=["number"]).columns.tolist()
+
+if not numeric_cols_for_scale_snap:
+    st.info("No numeric columns found in the current dataset.")
+
+else:
+    scale_snap_cols = st.multiselect(
+        label="Select columns to track",
+        options=numeric_cols_for_scale_snap,
+        placeholder="Choose one or more numeric columns...",
+        key="scaling_snapshot_columns"
+    )
+
+    snap_s_col1, snap_s_col2 = st.columns(2)
+
+    with snap_s_col1:
+        if st.button("📸 Take Scaling Snapshot", key="btn_take_scaling_snapshot"):
+
+            if not scale_snap_cols:
+                st.error("Please select at least one column to snapshot.")
+            else:
+                snapshot_data = {}
+                for col in scale_snap_cols:
+                    col_data = df[col].dropna()
+                    snapshot_data[col] = {
+                        "min":  round(float(col_data.min()),  4),
+                        "max":  round(float(col_data.max()),  4),
+                        "mean": round(float(col_data.mean()), 4),
+                        "std":  round(float(col_data.std()),  4)
+                    }
+                st.session_state.scaling_snapshot = snapshot_data
+                st.success(
+                    f"✅ Snapshot taken for {len(scale_snap_cols)} column(s). "
+                    "Apply a scaling action and return here to compare."
+                )
+
+    with snap_s_col2:
+        if st.button("🗑 Clear Scaling Snapshot", key="btn_clear_scaling_snapshot"):
+            st.session_state.scaling_snapshot = None
+            st.info("Scaling snapshot cleared.")
+
+    # Show before/after comparison if snapshot exists
+    if st.session_state.get("scaling_snapshot"):
+        snap = st.session_state.scaling_snapshot
+
+        st.write("**Scaling Impact Comparison:**")
+
+        for col, before_stats in snap.items():
+
+            if col not in df.columns:
+                st.caption(f"`{col}` no longer exists in the dataset.")
+                continue
+
+            curr_data = df[col].dropna()
+            after_stats = {
+                "min":  round(float(curr_data.min()),  4),
+                "max":  round(float(curr_data.max()),  4),
+                "mean": round(float(curr_data.mean()), 4),
+                "std":  round(float(curr_data.std()),  4)
+            }
+
+            with st.expander(f"Column: `{col}`", expanded=True):
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.metric(
+                    "Min",
+                    after_stats["min"],
+                    delta=round(after_stats["min"] - before_stats["min"], 4)
+                )
+                c2.metric(
+                    "Max",
+                    after_stats["max"],
+                    delta=round(after_stats["max"] - before_stats["max"], 4)
+                )
+                c3.metric(
+                    "Mean",
+                    after_stats["mean"],
+                    delta=round(after_stats["mean"] - before_stats["mean"], 4)
+                )
+                c4.metric(
+                    "Std",
+                    after_stats["std"],
+                    delta=round(after_stats["std"] - before_stats["std"], 4)
+                )
+
+                st.caption(
+                    f"Before → Min: {before_stats['min']} · "
+                    f"Max: {before_stats['max']} · "
+                    f"Mean: {before_stats['mean']} · "
+                    f"Std: {before_stats['std']}"
+                )
 
 # ---- Section 13: Min-Max Scaling ----
 st.markdown('<a name="scaling"></a>', unsafe_allow_html=True)
@@ -887,6 +1850,122 @@ if st.button("Apply — Drop Selected Columns", key="btn_drop_columns"):
         st.success(f"✅ Done — dropped **{len(columns_to_drop_cols)}** column(s). Dataset now has **{len(updated_df)} rows × {updated_df.shape[1]} columns**.")
         set_last_action_summary("Drop Columns", f"Dropped {len(columns_to_drop_cols)} column(s)")
         st.rerun()
+
+st.divider()
+
+# ---- Section 16b: Bin Numeric Column into Categories ----
+st.subheader("Bin Numeric Column into Categories")
+
+st.write(
+    "Convert a numeric column into grouped categories (bins). "
+    "For example, an age column can become 'Low', 'Medium', 'High' bands. "
+    "The result is saved as a new column alongside the original."
+)
+
+numeric_cols_for_bin = df.select_dtypes(include=["number"]).columns.tolist()
+
+if not numeric_cols_for_bin:
+    st.info("No numeric columns found in the current dataset.")
+
+else:
+    bin_source_col = st.selectbox(
+        label="Select a numeric column to bin",
+        options=numeric_cols_for_bin,
+        key="bin_source_column"
+    )
+
+    bin_count = st.slider(
+        label="Number of bins",
+        min_value=2,
+        max_value=20,
+        value=4,
+        step=1,
+        key="bin_count"
+    )
+
+    bin_output_col = st.text_input(
+        label="New output column name",
+        placeholder=f"e.g. {bin_source_col}_binned",
+        key="bin_output_column"
+    )
+
+    # Preview bin ranges before applying
+    usable_data = df[bin_source_col].dropna()
+
+    if len(usable_data) >= bin_count:
+        try:
+            preview_bins = pd.cut(
+                usable_data,
+                bins=bin_count,
+                include_lowest=True
+            )
+            st.caption(
+                f"Preview — unique bin ranges that will be created: "
+                f"{preview_bins.cat.categories.tolist()}"
+            )
+        except Exception:
+            pass
+
+    if st.button("Apply — Bin Column", key="btn_bin_column"):
+
+        # Validation: output name must not be empty
+        if bin_output_col.strip() == "":
+            st.error("Please enter a name for the new output column.")
+
+        # Validation: output name must not already exist
+        elif bin_output_col.strip() in df.columns:
+            st.error(
+                f"A column named `{bin_output_col.strip()}` already exists. "
+                "Please choose a different name."
+            )
+
+        # Validation: enough usable values to create bins
+        elif len(usable_data) < bin_count:
+            st.warning(
+                f"⚠️ `{bin_source_col}` has only **{len(usable_data)}** "
+                f"non-missing values — not enough to create {bin_count} bins. "
+                "Try reducing the number of bins."
+            )
+
+        else:
+            output_name = bin_output_col.strip()
+            updated_df = df.copy()
+
+            try:
+                updated_df[output_name] = pd.cut(
+                    updated_df[bin_source_col],
+                    bins=bin_count,
+                    include_lowest=True
+                ).astype(str)   # convert to string so it works cleanly downstream
+
+                # Save undo state and update session
+                st.session_state.undo_stack = df.copy()
+                st.session_state.working_df = updated_df
+
+                log_entry = build_log_entry(
+                    operation="bin_numeric_column",
+                    columns=[bin_source_col],
+                    parameters={
+                        "bins": bin_count,
+                        "output_column": output_name
+                    }
+                )
+                st.session_state.transformation_log.append(log_entry)
+
+                set_last_action_summary(
+                    "Bin Numeric Column",
+                    f"Binned `{bin_source_col}` into {bin_count} bins → `{output_name}`"
+                )
+
+                st.success(
+                    f"✅ Done — `{bin_source_col}` binned into **{bin_count}** "
+                    f"categories and saved as new column `{output_name}`. "
+                    f"Dataset now has **{updated_df.shape[1]}** columns."
+                )
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Binning failed: {str(e)}")
 
 st.divider()
 
@@ -1409,6 +2488,61 @@ if st.button("Run Allowed Values Check", key="btn_check_allowed"):
 
 st.divider()
 
+# ---- Validation: Non-Null Constraint Check ----
+st.subheader("Non-Null Constraint Check")
+
+st.write(
+    "Select one or more columns that must not contain missing values. "
+    "This check will flag any column that violates the non-null requirement. "
+    "Your dataset is not modified."
+)
+
+non_null_check_cols = st.multiselect(
+    label="Select required (non-null) columns",
+    options=df.columns.tolist(),
+    placeholder="Choose one or more columns...",
+    key="non_null_check_columns"
+)
+
+if st.button("Check Non-Null Constraint", key="btn_check_non_null"):
+
+    if not non_null_check_cols:
+        st.error("Please select at least one column to check.")
+
+    else:
+        total_rows = len(df)
+        violations = []
+
+        for col in non_null_check_cols:
+            missing_count = int(df[col].isnull().sum())
+            if missing_count > 0:
+                missing_pct = round(missing_count / total_rows * 100, 2)
+                violations.append({
+                    "Column":           col,
+                    "Missing Count":    missing_count,
+                    "Missing (%)":      missing_pct
+                })
+
+        if not violations:
+            st.success(
+                f"✅ All **{len(non_null_check_cols)}** selected column(s) "
+                "pass the non-null constraint — no missing values found."
+            )
+            # Clear any previous violations since this check passed
+            st.session_state.validation_violations_df = None
+        else:
+            st.warning(
+                f"⚠️ **{len(violations)}** column(s) violate the non-null "
+                "constraint. See details below:"
+            )
+            violations_df = pd.DataFrame(violations)
+            violations_df.index = range(1, len(violations_df) + 1)
+            st.dataframe(violations_df, use_container_width=True)
+            # Save violations so the shared export section can use them
+            st.session_state.validation_violations_df = violations_df
+
+st.divider()
+
 # ---- Validation: Check Datetime Parse Readiness ----
 st.markdown('<a name="validation-datetime"></a>', unsafe_allow_html=True)
 st.subheader("Check Datetime Parse Readiness")
@@ -1469,7 +2603,40 @@ if st.button("Check Datetime Readiness", key="btn_check_datetime"):
             failed_rows = df.loc[failed_index]
 
             st.dataframe(failed_rows.head(10), use_container_width=True)
-              
+
+st.divider()
+
+# ---- Validation: Export Validation Violations as CSV ----
+st.subheader("Export Validation Violations")
+
+st.write(
+    "If a validation check above produced a violations table, "
+    "you can download it here as a CSV file for review or reporting. "
+    "Run a validation check first to make the export available."
+)
+
+violations_export = st.session_state.get("validation_violations_df")
+
+if violations_export is None or violations_export.empty:
+    st.info(
+        "No violations table available yet. "
+        "Run a validation check above that finds violations first."
+    )
+else:
+    st.success(
+        f"**{len(violations_export)}** violation(s) ready to export."
+    )
+    st.dataframe(violations_export, use_container_width=True)
+
+    violations_csv = violations_export.to_csv(index=False).encode("utf-8")
+
+    st.download_button(
+        label="⬇ Download Violations as CSV",
+        data=violations_csv,
+        file_name="validation_violations.csv",
+        mime="text/csv",
+        key="download_violations_csv"
+    )              
 
 st.divider()
 

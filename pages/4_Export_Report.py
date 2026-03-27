@@ -4,7 +4,7 @@ import io
 from datetime import datetime
 
 from utils.session_state import initialize_session_state, data_is_loaded, render_sidebar_controls
-
+from utils.export_helpers import build_report_text   # <-- add this new line
 # Always initialize session state at the top of every page
 initialize_session_state()
 render_sidebar_controls()
@@ -139,6 +139,45 @@ st.download_button(
 
 st.divider()
 
+# ---- JSON Recipe Export ----
+st.subheader("Workflow Recipe Export")
+
+st.write(
+    "Download your full transformation workflow as a JSON file. "
+    "This captures every cleaning step so the process can be reviewed or reproduced later."
+)
+
+import json
+
+recipe = {
+    "app": "AI-Assisted Data Wrangler & Visualizer",
+    "exported_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    "source_file": st.session_state.get("uploaded_file_name") or "Unknown",
+    "total_steps": len(log),
+    "transformations": [
+        {
+            "operation": entry.get("operation", "unknown"),
+            "timestamp": entry.get("timestamp", ""),
+            "columns": entry.get("columns") or [],
+            "parameters": entry.get("parameters") or {}
+        }
+        for entry in log
+    ]
+}
+
+recipe_json = json.dumps(recipe, indent=2, default=str).encode("utf-8")
+recipe_filename = f"{base_name}_workflow_recipe.json"
+
+st.download_button(
+    label="⬇ Download Workflow Recipe (.json)",
+    data=recipe_json,
+    file_name=recipe_filename,
+    mime="application/json",
+    key="download_recipe_json"
+)
+
+st.divider()
+
 # ---- Transformation Report Section ----
 st.subheader("Transformation Report")
 
@@ -147,53 +186,40 @@ st.write(
     "or preview the report directly on this page."
 )
 
-# Build the text report in memory
-report_lines = []
+# Build report text once using the shared helper.
+# Make sure the final value is always a valid downloadable text payload.
+file_name = st.session_state.get("uploaded_file_name", None)
 
-report_lines.append("=" * 60)
-report_lines.append("  AI-Assisted Data Wrangler & Visualizer")
-report_lines.append("  Transformation Report")
-report_lines.append("=" * 60)
-report_lines.append("")
-report_lines.append(f"Generated : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-report_lines.append(f"File Name : {st.session_state.uploaded_file_name or 'Unknown'}")
-report_lines.append(f"Shape     : {df.shape[0]} rows x {df.shape[1]} columns")
-report_lines.append(f"Total Transformations: {len(log)}")
-report_lines.append("")
-report_lines.append("-" * 60)
-report_lines.append("TRANSFORMATION LOG")
-report_lines.append("-" * 60)
-report_lines.append("")
+try:
+    raw_report = build_report_text(log, file_name)
+except Exception as e:
+    raw_report = (
+        "Transformation Report\n"
+        "=====================\n\n"
+        f"Could not build the full report.\n"
+        f"Error: {e}\n"
+    )
 
-if not log:
-    report_lines.append("No transformations were recorded in this session.")
-
+# Normalize report into plain text
+if raw_report is None:
+    report_text = (
+        "Transformation Report\n"
+        "=====================\n\n"
+        "No report content available.\n"
+    )
+elif isinstance(raw_report, bytes):
+    report_text = raw_report.decode("utf-8", errors="replace")
+elif isinstance(raw_report, str):
+    report_text = raw_report
 else:
-    for i, entry in enumerate(log, start=1):
-        report_lines.append(f"Step {i}: {entry['operation']}")
-        report_lines.append(f"  Timestamp  : {entry['timestamp']}")
+    report_text = str(raw_report)
 
-        if entry["columns"]:
-            report_lines.append(f"  Columns    : {', '.join(entry['columns'])}")
-        else:
-            report_lines.append("  Columns    : all columns")
-
-        if entry["parameters"]:
-            for key, value in entry["parameters"].items():
-                report_lines.append(f"  {key}: {value}")
-
-        report_lines.append("")
-
-report_lines.append("=" * 60)
-report_lines.append("End of Report")
-report_lines.append("=" * 60)
-
-# Join all lines into one string and encode to bytes
-report_text = "\n".join(report_lines).encode("utf-8")
+# Convert to bytes for safe download
+report_bytes = report_text.encode("utf-8")
 
 st.download_button(
     label="⬇ Download Transformation Report (.txt)",
-    data=report_text,
+    data=report_bytes,
     file_name="transformation_report.txt",
     mime="text/plain",
     key="download_report_txt"
@@ -237,6 +263,5 @@ if st.button("🔄 Reset Export View", key="btn_reset_export_view"):
 # --- On-Page Report Preview ---
 st.write("**Report Preview:**")
 
-# Reuse the same report_lines list already built above
-# Join and display in a code block for clean readable formatting
-st.code("\n".join(report_lines), language=None)
+# Uses the same report_text string built above — preview matches download exactly
+st.code(report_text, language=None)
