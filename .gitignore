@@ -44,3 +44,16 @@ desktop.ini
 
 # ── Logs ─────────────────────────────────────────────────────────────────────
 *.log
+
+# Python / cache
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Local outputs
+outputs/
+
+# AI documentation - ignore only if you do NOT want them on GitHub
+AI_USAGE.md
+ai_chats/
