@@ -19,7 +19,7 @@ def build_report_text(transformation_log, file_name=None):
     # --- Report Header ---
     lines.append("=" * 60)
     lines.append("  TRANSFORMATION REPORT")
-    lines.append("  AI-Assisted Data Wrangler & Visualizer")
+    lines.append("  Streamline Data Studio")
     lines.append("=" * 60)
 
     # Show the file name if we have one

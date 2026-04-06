@@ -150,7 +150,7 @@ st.write(
 import json
 
 recipe = {
-    "app": "AI-Assisted Data Wrangler & Visualizer",
+    "app": "Streamline Data Studio",
     "exported_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "source_file": st.session_state.get("uploaded_file_name") or "Unknown",
     "total_steps": len(log),

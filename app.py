@@ -5,7 +5,7 @@ from utils.session_state import initialize_session_state, reset_session_state, d
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="AI-Assisted Data Wrangler & Visualizer",
+    page_title="Streamline Data Studio",
     layout="wide"
 )
 
@@ -14,7 +14,7 @@ st.set_page_config(
 initialize_session_state()
 
 # --- App Title and Welcome Message ---
-st.title("AI-Assisted Data Wrangler & Visualizer")
+st.title("Streamline Data Studio")
 
 st.write(
     "Welcome! This app helps you upload, clean, visualize, and export datasets "

@@ -3,7 +3,7 @@
 
 ## 1. Introduction
 
-This report reflects on our experience developing the AI-Assisted Data Wrangler and Visualizer as part of our Data Wrangling and Visualization coursework. The project required us to build a fully functional, multi-page Streamlit web application that allows users to upload datasets, inspect and clean them, create visualizations, and export both the cleaned data and a record of all transformations applied. Working as a pair on a project of this size felt challenging at first, but it turned out to be one of the most useful things we have done in terms of actually putting what we have learned into practice.
+This report reflects on our experience developing Streamline Data Studio as part of our Data Wrangling and Visualization coursework. The project required us to build a fully functional, multi-page Streamlit web application that allows users to upload datasets, inspect and clean them, create visualizations, and export both the cleaned data and a record of all transformations applied. Working as a pair on a project of this size felt challenging at first, but it turned out to be one of the most useful things we have done in terms of actually putting what we have learned into practice.
 
 ## 2. How We Worked as a Team and Planned the Project
 

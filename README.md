@@ -1,4 +1,4 @@
-# AI-Assisted Data Wrangler & Visualizer
+# Streamline Data Studio
 
 A multi-page Streamlit app built for a Data Wrangling and Visualization university coursework project.
 The app lets you upload a dataset, clean and prepare it, build charts, and export the results — all through a point-and-click interface with no coding required.
@@ -196,7 +196,7 @@ The project structure, feature decisions, and workflow design reflect the course
 | Field | Detail |
 |---|---|
 | Course | Data Wrangling and Visualization |
-| App name | AI-Assisted Data Wrangler & Visualizer |
+| App name | Streamline Data Studio |
 | Interface | Streamlit (multi-page) |
 | Language | Python 3 |
 | Key libraries | pandas, numpy, matplotlib, streamlit |

@@ -1,7 +1,7 @@
-# Prompts Used During Development
+# Prompts Used During Development — Streamline Data Studio
 
 ## Purpose
-This file provides a clean summary of the main prompts used during the development of the Streamlit coursework project **AI-Assisted Data Wrangler & Visualizer**.
+This file provides a clean summary of the main prompts used during the development of the Streamlit coursework project ** Streamline Data Studio**.
 
 It is intended to document the major AI prompts used across planning, building, debugging, and final submission preparation.
 
